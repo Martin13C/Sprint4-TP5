@@ -1,36 +1,36 @@
-import { useState } from "react";
-import { useNavigate } from "react-router";
+import { useNavigate, useParams } from "react-router";
 import { usePerfiles } from "../context/PerfilesContext";
 import { useForm } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import { schemaYup } from "../validations/SchemaYup";
-import { ClipLoader } from "react-spinners"; // usando spinner-loader
+import { ClipLoader } from "react-spinners";
+import { useEffect } from "react";
 
-export function Agregar() {
-  const { postApi } = usePerfiles();
+export function Editar() {
+
+  const { id } = useParams();
+  const { putApi, setLoading, perfiles, loading } = usePerfiles();
   const navigate = useNavigate();
-  const [isLoading, setIsLoading] = useState(false);
+  const perfil = perfiles.find((perfil) => perfil.id === id);
 
   const {
     register,
     handleSubmit,
+    reset,
     formState: { errors },
     setError,
-    reset,
-  } = useForm({
-    resolver: yupResolver(schemaYup),
-  });
+  } = useForm({resolver: yupResolver(schemaYup)});
 
   const onSubmit = async (data) => {
+    setLoading(true);
     try {
-      setIsLoading(true);
-      await postApi(data);
-      reset();
-      navigate("/dashboard");
+      await putApi(id, data);
+      navigate(`/dashboard`);
     } catch (error) {
-      setError("apiError", { message: "Hubo un problema al crear el perfil" });
+      setError("apiError", { message: "Error al editar el perfil" });
+      console.error(error);
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
@@ -38,31 +38,37 @@ export function Agregar() {
     `w-full px-4 py-2 rounded-md bg-gray-700 text-white border ${
       hasError ? "border-red-400" : "border-transparent"
     } focus:outline-none focus:ring-2 ${
-      hasError ? "focus:ring-red-400" : "focus:ring-yellow-400"
+      hasError ? "focus:ring-red-400" : "focus:ring-green-400"
     } transition`;
 
 
-    
+    useEffect(() => {
+  if (perfil) {
+    reset({
+      nombre: perfil.nombre || "",
+      edad: perfil.edad || "",
+      sexo: perfil.sexo || "", // <-- aquí cargas el sexo actual
+      email: perfil.email || "",
+      imagen: perfil.imagen || "",
+    });
+  }
+}, [perfil, reset]);
+
   return (
     <div className="flex items-center justify-center min-h-screen bg-gray-800 p-4">
       <div className="w-full max-w-lg bg-gray-900 p-8 rounded-xl shadow-lg">
-        <h1 className="text-3xl font-bold text-yellow-400 text-center mb-6">
-          Agregar Perfil
-        </h1>
+        <h1 className="text-3xl font-bold text-green-400 text-center mb-6">Editar Perfil</h1>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           {/* Nombre */}
           <div>
             <input
               type="text"
-              placeholder="Nombre"
               {...register("nombre")}
               className={inputStyle(errors.nombre)}
             />
             {errors.nombre && (
-              <p className="text-red-400 text-sm mt-1">
-                {errors.nombre.message}
-              </p>
+              <p className="text-red-400 text-sm mt-1">{errors.nombre.message}</p>
             )}
           </div>
 
@@ -70,35 +76,26 @@ export function Agregar() {
           <div>
             <input
               type="number"
-              placeholder="Edad"
               min="1"
               max="120"
               {...register("edad")}
               className={inputStyle(errors.edad)}
             />
             {errors.edad && (
-              <p className="text-red-400 text-sm mt-1">
-                {errors.edad.message}
-              </p>
+              <p className="text-red-400 text-sm mt-1">{errors.edad.message}</p>
             )}
           </div>
 
           {/* Sexo */}
           <div>
-            <select
-              {...register("sexo")}
-              className={inputStyle(errors.sexo)}
-              placeholder="Sexo Opcional"
-            >
-              <option value=""></option>
+            <select {...register("sexo")} className={inputStyle(errors.sexo)} >
+              <option value="" disabled hidden></option>
               <option value="Masculino">Masculino</option>
               <option value="Femenino">Femenino</option>
               <option value="Otro">Otro</option>
             </select>
             {errors.sexo && (
-              <p className="text-red-400 text-sm mt-1">
-                {errors.sexo.message}
-              </p>
+              <p className="text-red-400 text-sm mt-1">{errors.sexo.message}</p>
             )}
           </div>
 
@@ -106,14 +103,12 @@ export function Agregar() {
           <div>
             <input
               type="email"
-              placeholder="Email"
+              placeholder="Email *"
               {...register("email")}
               className={inputStyle(errors.email)}
             />
             {errors.email && (
-              <p className="text-red-400 text-sm mt-1">
-                {errors.email.message}
-              </p>
+              <p className="text-red-400 text-sm mt-1">{errors.email.message}</p>
             )}
           </div>
 
@@ -126,31 +121,25 @@ export function Agregar() {
               className={inputStyle(errors.imagen)}
             />
             {errors.imagen && (
-              <p className="text-red-400 text-sm mt-1">
-                {errors.imagen.message}
-              </p>
+              <p className="text-red-400 text-sm mt-1">{errors.imagen.message}</p>
             )}
           </div>
 
           {/* Error API */}
           {errors.apiError && (
-            <p className="text-red-400 font-semibold text-center">
-              {errors.apiError.message}
-            </p>
+            <p className="text-red-400 font-semibold text-center">{errors.apiError.message}</p>
           )}
 
           {/* Botón */}
           <button
             type="submit"
-            disabled={isLoading}
-            className={`w-full flex justify-center items-center gap-2 px-6 py-3 bg-yellow-400 text-gray-900 font-semibold rounded-lg transition ${
-              isLoading
-                ? "opacity-70 cursor-not-allowed"
-                : "hover:bg-yellow-500"
+            disabled={loading}
+            className={`w-full flex justify-center items-center gap-2 px-6 py-3 bg-green-500 text-gray-900 font-semibold rounded-lg transition ${
+              loading ? "opacity-70 cursor-not-allowed" : "hover:bg-green-600"
             }`}
           >
-            {isLoading && <ClipLoader size={20} color="#1f2937" />}
-            {isLoading ? "Creando..." : "Crear Perfil"}
+            {loading && <ClipLoader size={20} color="#1f2937" />}
+            {loading ? "Guardando..." : "Guardar Cambios"}
           </button>
         </form>
       </div>
@@ -158,4 +147,4 @@ export function Agregar() {
   );
 }
 
-export default Agregar;
+export default Editar;
